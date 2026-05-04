@@ -1,32 +1,43 @@
 package com.iago.currencyhashconverter
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.widget.TextView
+import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.iago.currencyhashconverter.databinding.ActivityMainBinding
+import com.iago.currencyhashconverter.viewmodel.CurrencyViewModel
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private val viewModel: CurrencyViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Example of a call to a native method
-        binding.sampleText.text = stringFromJNI()
+        binding.recyclerRates.layoutManager = LinearLayoutManager(this)
+
+        binding.btnFetch.setOnClickListener {
+            val base = binding.editBase.text.toString().uppercase()
+            if (base.isNotEmpty()) viewModel.fetchRates(base)
+        }
+
+        viewModel.rates.observe(this) { rates ->
+            binding.recyclerRates.adapter = RatesAdapter(rates)
+            val hash = generateHash(rates.toString())
+            binding.tvHash.text = "Hash: $hash"
+        }
+
+        viewModel.error.observe(this) { error ->
+            binding.tvHash.text = error
+        }
     }
 
-    /**
-     * A native method that is implemented by the 'currencyhashconverter' native library,
-     * which is packaged with this application.
-     */
-    external fun stringFromJNI(): String
+    external fun generateHash(input: String): String
 
     companion object {
-        // Used to load the 'currencyhashconverter' library on application startup.
         init {
             System.loadLibrary("currencyhashconverter")
         }
